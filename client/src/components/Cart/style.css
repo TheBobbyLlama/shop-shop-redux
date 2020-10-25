@@ -48,6 +48,10 @@
   .cart-closed:hover {
 	transform: rotate(8deg);
   }
+
+  .cart-closed span {
+	  cursor: pointer;
+  }
   
   .cart img {
 	width: 70px;

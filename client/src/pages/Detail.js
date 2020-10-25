@@ -30,8 +30,6 @@ function Detail({ products, cart, dispatch }) {
 
   const { loading, data } = useQuery(QUERY_PRODUCTS);
 
-  console.log(products, cart);
-
   useEffect(() => {
     // already in global store
     if (products.length) {
