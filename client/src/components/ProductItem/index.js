@@ -1,41 +1,29 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { idbPromise, pluralize } from "../../utils/helpers"
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { connect } from 'react-redux';
+import { idbPromise, pluralize } from '../../utils/helpers'
 
-import { useStoreContext } from '../../utils/GlobalState';
-import { ADD_TO_CART, UPDATE_CART_QUANTITY } from '../../utils/actions';
+import { addToCart, updateCartQuantity } from '../../utils/actions';
 
-function ProductItem(item) {
-  const {
-    image,
-    name,
-    _id,
-    price,
-    quantity
-  } = item;
+const mapStateToProps = state => {
+	return {
+	  cart: state.cart,
+	}
+}
 
-  const [state, dispatch] = useStoreContext();
-
-  const { cart } = state;
-
-  const addToCart = () => {
+function ProductItem({ image, name, _id, price,quantity, cart, dispatch }) {
+  const addToClientCart = () => {
     const itemInCart = cart.find((cartItem) => cartItem._id === _id)
     if (itemInCart) {
-      dispatch({
-        type: UPDATE_CART_QUANTITY,
-        _id: _id,
-        purchaseQuantity: parseInt(itemInCart.purchaseQuantity) + 1
-      });
+      dispatch(updateCartQuantity({ _id: _id, purchaseQuantity: parseInt(itemInCart.purchaseQuantity) + 1 }));
       idbPromise('cart', 'put', {
         ...itemInCart,
         purchaseQuantity: parseInt(itemInCart.purchaseQuantity) + 1
       });
     } else {
-      dispatch({
-        type: ADD_TO_CART,
-        product: { ...item, purchaseQuantity: 1 }
-      });
-      idbPromise('cart', 'put', { ...item, purchaseQuantity: 1 });
+      let product = { image, name, _id, price, quantity, purchaseQuantity: 1 };
+      dispatch(addToCart(product));
+      idbPromise('cart', 'put', product);
     }
   }
 
@@ -52,9 +40,9 @@ function ProductItem(item) {
         <div>{quantity} {pluralize("item", quantity)} in stock</div>
         <span>${price}</span>
       </div>
-      <button onClick={addToCart}>Add to cart</button>
+      <button onClick={addToClientCart}>Add to cart</button>
     </div>
   );
 }
 
-export default ProductItem;
+export default connect(mapStateToProps)(ProductItem); // Container/component in one.

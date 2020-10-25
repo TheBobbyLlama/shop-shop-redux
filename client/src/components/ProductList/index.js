@@ -1,27 +1,27 @@
 import React, { useEffect } from 'react';
-import { idbPromise } from "../../utils/helpers";
+import { idbPromise } from '../../utils/helpers';
 import { useQuery } from '@apollo/react-hooks';
+import { connect } from 'react-redux';
 
-import { useStoreContext } from '../../utils/GlobalState';
-import { UPDATE_PRODUCTS } from '../../utils/actions';
+import { updateProducts } from '../../utils/actions';
 
-import ProductItem from "../ProductItem";
-import { QUERY_PRODUCTS } from "../../utils/queries";
-import spinner from "../../assets/spinner.gif"
+import ProductItem from '../ProductItem';
+import { QUERY_PRODUCTS } from '../../utils/queries';
+import spinner from '../../assets/spinner.gif';
 
-function ProductList() {
-  const [state, dispatch] = useStoreContext();
+const mapStateToProps = state => {
+	return {
+    currentCategory: state.currentCategory,
+	  products: state.products
+	}
+}
 
-  const { currentCategory } = state;
-
+function ProductList({ currentCategory, products, dispatch }) {
   const { loading, data } = useQuery(QUERY_PRODUCTS);
 
   useEffect(() => {
     if(data) {
-      dispatch({
-        type: UPDATE_PRODUCTS,
-        products: data.products
-      });
+      dispatch(updateProducts(data.products));
   
       data.products.forEach((product) => {
         idbPromise('products', 'put', product);
@@ -29,28 +29,25 @@ function ProductList() {
       // add else if to check if `loading` is undefined in `useQuery()` Hook
     } else if (!loading) {
       // since we're offline, get all of the data from the `products` store
-      idbPromise('products', 'get').then((products) => {
+      idbPromise('products', 'get').then((tmpProducts) => {
         // use retrieved data to set global state for offline browsing
-        dispatch({
-          type: UPDATE_PRODUCTS,
-          products: products
-        });
+        dispatch(updateProducts(tmpProducts));
       });
     }
   }, [data, loading, dispatch]);
 
   function filterProducts() {
     if (!currentCategory) {
-      return state.products;
+      return products;
     }
 
-    return state.products.filter(product => product.category._id === currentCategory);
+    return products.filter(product => product.category._id === currentCategory);
   }
 
   return (
     <div className="my-2">
       <h2>Our Products:</h2>
-      {state.products.length ? (
+      {products.length ? (
         <div className="flex-row">
             {filterProducts().map(product => (
                 <ProductItem
@@ -72,4 +69,4 @@ function ProductList() {
   );
 }
 
-export default ProductList;
+export default connect(mapStateToProps)(ProductList); // Container/component in one.

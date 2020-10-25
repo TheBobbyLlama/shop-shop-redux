@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
+import { connect } from 'react-redux';
 import { useLazyQuery } from '@apollo/react-hooks';
-import { TOGGLE_CART, ADD_MULTIPLE_TO_CART } from "../../utils/actions";
+import { toggleCart, addMultipleToCart } from "../../utils/actions";
 import Auth from '../../utils/auth';
 import { idbPromise } from "../../utils/helpers";
 import { QUERY_CHECKOUT } from '../../utils/queries';
@@ -8,24 +9,28 @@ import { loadStripe } from '@stripe/stripe-js';
 import CartItem from '../CartItem';
 import './style.css';
 
-import { useStoreContext } from '../../utils/GlobalState';
-
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
-const Cart = () => {
-	const [state, dispatch] = useStoreContext();
+const mapStateToProps = state => {
+	return {
+	  cart: state.cart,
+	  cartOpen: state.cartOpen
+	}
+}
+
+const Cart = ({ cart, cartOpen, dispatch }) => {
 	const [getCheckout, { data }] = useLazyQuery(QUERY_CHECKOUT);
 
 	useEffect(() => {
 		async function getCart() {
-		  const cart = await idbPromise('cart', 'get');
-		  dispatch({ type: ADD_MULTIPLE_TO_CART, products: [...cart] });
+		  const tmpCart = await idbPromise('cart', 'get');
+		  dispatch(addMultipleToCart([...tmpCart]));
 		};
 	  
-		if (!state.cart.length) {
+		if (!cart.length) {
 		  getCart();
 		}
-	}, [state.cart.length, dispatch]);
+	}, [cart.length, dispatch]);
 
 	useEffect(() => {
 		if (data) {
@@ -35,13 +40,13 @@ const Cart = () => {
 		}
 	}, [data]);
 
-	function toggleCart() {
-		dispatch({ type: TOGGLE_CART });
+	function toggleCartDisplay() {
+		dispatch(toggleCart());
 	}
 
 	function calculateTotal() {
 		let sum = 0;
-		state.cart.forEach(item => {
+		cart.forEach(item => {
 			sum += item.price * item.purchaseQuantity;
 		});
 		return sum.toFixed(2);
@@ -50,7 +55,7 @@ const Cart = () => {
 	function submitCheckout() {
 		const productIds = [];
 	  
-		state.cart.forEach((item) => {
+		cart.forEach((item) => {
 			for (let i = 0; i < item.purchaseQuantity; i++) {
 				productIds.push(item._id);
 			}
@@ -61,47 +66,47 @@ const Cart = () => {
 		});
 	}
 
-	if (!state.cartOpen) {
+	if (!cartOpen) {
 		return (
-		  <div className="cart-closed" onClick={toggleCart}>
-			<span
-			  role="img"
-			  aria-label="cart">🛒</span>
-		  </div>
+			<div className="cart-closed" onClick={toggleCartDisplay}>
+				<span
+				role="img"
+				aria-label="cart">🛒</span>
+			</div>
 		);
-	  }
+	}
 
-  return (
-    <div className="cart">
-		<div className="close" onClick={toggleCart}>[close]</div>
-		<h2>Shopping Cart</h2>
-		{state.cart.length ? (
-			<div>
-			{state.cart.map(item => (
-				<CartItem key={item._id} item={item} />
-			))}
-			<div className="flex-row space-between">
-				<strong>Total: ${calculateTotal()}</strong>
-				{
-				Auth.loggedIn() ?
-					<button onClick={submitCheckout}>
-						Checkout
-					</button>
-					:
-					<span>(log in to check out)</span>
-				}
+	return (
+		<div className="cart">
+			<div className="close" onClick={toggleCartDisplay}>[close]</div>
+			<h2>Shopping Cart</h2>
+			{cart.length ? (
+				<div>
+				{cart.map(item => (
+					<CartItem key={item._id} item={item} />
+				))}
+				<div className="flex-row space-between">
+					<strong>Total: ${calculateTotal()}</strong>
+					{
+					Auth.loggedIn() ?
+						<button onClick={submitCheckout}>
+							Checkout
+						</button>
+						:
+						<span>(log in to check out)</span>
+					}
+				</div>
+				</div>
+			) : (
+				<h3>
+				<span role="img" aria-label="shocked">
+					😱
+				</span>
+				You haven't added anything to your cart yet!
+				</h3>
+			)}
 			</div>
-			</div>
-		) : (
-			<h3>
-			<span role="img" aria-label="shocked">
-				😱
-			</span>
-			You haven't added anything to your cart yet!
-			</h3>
-		)}
-		</div>
-  );
+	);
 };
 
-export default Cart;
+export default connect(mapStateToProps)(Cart); // Container/component in one.
